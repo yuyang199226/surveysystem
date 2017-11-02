@@ -5,6 +5,26 @@
     <meta charset="UTF-8">
     <title>调查表</title>
     <link rel="stylesheet" href="{% static 'plugins/bootstrap/css/bootstrap.css' %}">
+    <style>
+        .item-title{
+            margin: 5px;
+            padding: 2px;
+            font-weight: bolder;
+            font-size: large;
+        }
+        .item-body{
+            margin: 5px;
+            padding: 2px;
+        }
+        .item-area{
+            padding: 5px;
+            border: 1px solid royalblue;
+        }
+{#        input{#}
+{#            margin-left:15px;#}
+{#            padding-left: 15px;#}
+{#        }#}
+    </style>
 </head>
 <body>
 <div class="container">
@@ -12,7 +32,8 @@
         <div class="col-md-8 col-md-offset-2">
         <h3>{{ survey_table.survey.title }}</h3>
             <form action="" method="post">
-                 <div class="items">
+                {% csrf_token %}
+                <div class="items">
                {{ survey_table.gen_item_html }}
             </div>
 

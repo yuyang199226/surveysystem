@@ -33,7 +33,7 @@
 <body>
 <div class="container">
     <div class="row">
-        <div class="col-md-6 col-md-offset-3">
+        <div class="col-md-8 col-md-offset-2">
             <h2>问卷调查表</h2>
             <div class="per-item" hidden>
                         <a class="del-qitem btn btn-xs btn-default" type="buttuon">X删除</a>
@@ -181,20 +181,21 @@
         console.log(val);
        if(val=='suggestion' | val=='score'){
 {#        删除所有的typeinput#}
-        $(this).next().next().empty();
+        $(this).next().next().children().empty();
 
        }else{
             var num = $(this).attr('name').split('-')[1];
-        console.log(num);
+{#        console.log(num);#}
             var $ele_type = $('.per-item[hidden] .type-item').eq(0).clone();
-            console.log($ele_type[0]);
+{#            console.log($ele_type[0]);#}
             $ele_type.find('[name]').each(function () {
            name_val = $(this).attr('name');
             name_val = name_val.split('-')[0];
            $(this).attr('name',name_val+'-'+num);
 
         });
-            $(this).next().next().append($ele_type);
+            console.log($(this).next()[0]);
+            $(this).next().next().children().first().append($ele_type);
        }
    })
 </script>

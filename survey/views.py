@@ -7,20 +7,24 @@ from . import models
 import copy
 from django.db import transaction
 
-from django.http import QueryDict
+
 
 class Survey(object):
+
     def __init__(self,survey_obj):
         self.survey = survey_obj
         self.items = survey_obj.items.all()
+
     def gen_item_html(self):
-        items_html = ''
+        items_html = '<div class="item-area">'
         print(self.items.count())
         for item in self.items:
-            item_html = '<div>{}</div></hr>{}'.format(item.qcontent,
+            item_html = '<div class="item-title">{}</div class="item-body"><div>{}</div>'.format(item.qcontent,
                                                           self.gen_type_html(item))
             items_html+=item_html
+        items_html+='</div>'
         return mark_safe(items_html)
+
     def gen_type_html(self,item_obj):
         item_type = item_obj.type
         html = getattr(self,item_type)(item_obj)
@@ -31,33 +35,36 @@ class Survey(object):
         typedesces = item_obj.itemtypedesc_set.all()
         html = ''
         for i in typedesces:
-            a = '<label><input type="radio" name={} value={}>{}</label></hr>'.format(item_obj.pk,i.score,i.typedesc)
+            name = '{}/{}'.format(item_obj.pk,'single')
+            a = '<label><input type="radio" name={} value={}>{}</label></hr>'.format(name,i.pk,i.typedesc)
             html+=a
+
         return html
-    def suggestion(self,item_obj):
-        '''建议'''
-        html = '<textarea name={} id="" cols="60" rows="2" placeholder="请写下您宝贵的建议"></textarea>'.format(item_obj.pk)
-        return html
-        # types=['single','multi','score','suggestion']
-        # for i in types:
+
     def multi(self,item_obj):
         '''多选'''
         typedesces = item_obj.itemtypedesc_set.all()
         html = ''
         for i in typedesces:
-            a = '<label><input type="checkbox" name={} value={}>{}</label></hr>'.format(item_obj.pk, i.score, i.typedesc)
+            name='{}/{}'.format(item_obj.pk,'multi')
+            a = '<label><input type="checkbox" name={} value={}>{}</label></hr>'.format(name, i.pk, i.typedesc)
             html += a
         return html
+
+    def suggestion(self,item_obj):
+        '''建议'''
+        name = '{}/{}'.format(item_obj.pk,'suggestion')
+        html = '<textarea name={} id="" cols="60" rows="2" placeholder="请写下您宝贵的建议"></textarea>'.format(name)
+        return html
+
     def score(self,item_obj):
         '''评分'''
         htmls = ''
         for i in range(1,11):
-            html = '<label><input type="radio" name={} value={}><a class="btn btn-default btn-xs">i</a></label>'.format(item_obj.pk,i)
+            name='{}/{}'.format(item_obj.pk,'score')
+            html = ' <label><input type="radio" name={} value={}><a class="btn btn-default btn-xs">{}</a></label> '.format(name,i,i)
             htmls+=html
         return htmls
-
-
-
 
 
 def login(request):
@@ -71,6 +78,7 @@ def login(request):
             password = request.POST.get('password')
             user = rbac_models.User.objects.filter(username=username,password=password)
             if user:
+                request.session['userinfo']= user.first().pk #加到session中
                 return redirect('/home/')
             else:
                 return render(request, 'login.html', {'loginform': loginform})
@@ -118,7 +126,6 @@ def survey_add(request):
                         qitem_obj = models.Qitem(qcontent=dic_field['qcontent'][0],type=dic_field['type'][0],
                                      survey=survey_obj)
                         qitem_obj.save()
-
                         flag = dic_field['type'][0]
                         del dic_field['qcontent']
                         del dic_field['type']
@@ -133,9 +140,6 @@ def survey_add(request):
                             for i in range(len(ls_all) - 1):
                                 for j in range(len(ls_all[0])):
                                     ls_all[0][j].update(ls_all[i + 1][j])
-
-                            # itemtype = list(zip(dic_field['typedesc'],dic_field['score']))
-                            # print(itemtype)
                             for i in ls_all[0]:
                                 type_obj = models.ItemTypeDesc(**i,item=qitem_obj)
                                 type_obj.save()
@@ -148,24 +152,56 @@ def home(request):
     surveies = models.Survey.objects.all()
     return render(request,'home.html',{'survies':surveies})
 
+
+
+
 def questionsurvey(request,pk):
-    survey_table_obj =models.Survey.objects.filter(pk=pk).first()
-    #     .select_related('items').select_related('itemtypedesc_set')
-    # for i in survey_table:
-    #     print(i)
+    if request.method == 'GET':
+        survey_table_obj =models.Survey.objects.filter(pk=pk).first()
+        survey_table = Survey(survey_table_obj)
+        context = {
+            'survey_table':survey_table
+        }
+        return render(request,'survey_table.html',context)
 
-    survey_table = Survey(survey_table_obj)
+    elif request.method == 'POST':
+        survey_pk = pk
+        user_pk = request.session.get('userinfo')
+        params = copy.deepcopy(request.POST)
+        params._mutable = True
+        del params['csrfmiddlewaretoken']
+        for name,value in params.items():
+            # try:
+            #     with transaction.atomic():
+            item_obj_pk,type = name.split('/')
+            if type == 'single':
+                single_id = params.get(name).strip()
+                print('single',single_id)
+                print(int(single_id.strip()))
+                models.SurveyItemResult.objects.create(survey_id=survey_pk,item_id=item_obj_pk, user_id=user_pk,single_id=int(single_id))
 
-    context = {
-        'survey_table':survey_table
-    }
-    # print(survey_table2)
-    return render(request,'survey_table.html',context)
+            elif type == 'multi':
+                multi_ids = params.getlist(name)
+                for id in multi_ids:
+                    models.SurveyItemResult.objects. \
+                        create(survey_id=survey_pk, item_id=item_obj_pk, user_id=user_pk,
+                               single_id=int(id))
 
+            elif type == 'score':
+                models.SurveyItemResult.objects. \
+                    create(survey_id=survey_pk, item_id=item_obj_pk, user_id=user_pk,
+                           score=int(params.get(name)))
 
+            else:
+                print('suggestion>>>', params.get(name))
+                models.SurveyItemResult.objects. \
+                    create(survey_id=survey_pk, item_id=item_obj_pk, user_id=user_pk,
+                           suggestion=params.get(name))
+            # except Exception as e:
+            #     return HttpResponse('提交失败了')
 
-
-
+        print('>>>>>>',request.POST)
+        return HttpResponse('提交成功')
 
 def gen_survey_item(request):
     if request.is_ajax():

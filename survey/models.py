@@ -39,9 +39,11 @@ class SurveyItemResult(models.Model):
     survey = models.ForeignKey(to=Survey,verbose_name='问卷')
     item = models.ForeignKey(to=Qitem,verbose_name='调查项')
     user = models.ForeignKey(to=User,verbose_name='回答者')
+
     single = models.ForeignKey(verbose_name='单选',to='ItemTypeDesc',blank=True,null=True)
     score = models.IntegerField(verbose_name='评分',blank=True,null=True)
     suggestion = models.TextField(verbose_name='建议',blank=True,null=True)
+
     date = models.DateField(verbose_name='回答日期',auto_now_add=True)
 
 class Profile(models.Model):
