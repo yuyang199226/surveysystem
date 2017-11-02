@@ -1,0 +1,202 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>添加问卷调查</title>
+    <link rel="stylesheet" href="{% static 'plugins/bootstrap/css/bootstrap.css' %}">
+    <style>
+        .survey-head{
+            padding: 5px 10px;
+            margin: 5px 10px;
+            border: 1px solid grey;
+        }
+        .item-q{
+           padding: 5px 10px;
+            margin: 5px 10px;
+            border: 1px solid aquamarine;
+        }
+        .per-item{
+            border-bottom: 1px solid grey;
+            margin-top: 10px;
+            padding: 2px;
+        }
+        .type-item,.del-qitem{
+            display: inline-block;
+            margin: 2px;
+        }
+
+    </style>
+    <script src="{% static 'js/jquery-1.12.4.js' %}"></script>
+    <script src="{% static 'plugins/bootstrap/js/bootstrap.js' %}"></script>
+</head>
+<body>
+<div class="container">
+    <div class="row">
+        <div class="col-md-6 col-md-offset-3">
+            <h2>问卷调查表</h2>
+            <div class="per-item" hidden>
+                        <a class="del-qitem btn btn-xs btn-default" type="buttuon">X删除</a>
+                        {% for field in qitemform %}
+                            <div class="form-group">
+                                <label>{{ field.label }}</label>
+                                {{ field }}
+                                {{ field.errors.0 }}
+                                {% if field.name == 'type' %}
+                                    <buttuon class="btn btn-xs btn-default add-type">+</buttuon>
+                                    <div>
+                                        <ul class="type-content">
+                                            <li class="type-item">
+                                                {% for i in typeform %}
+                                                    {{ i.label }}{{ i }}
+                                                    {{ i.errors.0 }}
+                                                {% endfor %}
+                                            <buttuon class="btn btn-sm btn-default del-type">X</buttuon>
+                                            </li>
+
+                                        </ul>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                    </div>
+            <form class="form" action="" method="post">
+            {% csrf_token %}
+                <div class="survey-head">
+                    {% for field in surveyform %}
+                        <div class="form-group">
+                            <label>{{ field.label }}</label>
+                            {{ field }}
+                            {{ field.errors.0 }}
+                        </div>
+                    {% endfor %}
+                    <buttuon class="btn btn-default btn-sm" type="button" id="add_item">+问题</buttuon>
+                </div>
+                {#        问题开始#}
+                <div class="item-q">
+
+                    <div class="per-item">
+                        <a class="del-qitem btn btn-xs btn-default" type="buttuon">X删除</a>
+                        {% for field in qitemform %}
+                            <div class="form-group">
+                                <label>{{ field.label }}</label>
+                                {{ field }}
+                                {{ field.errors.0 }}
+                                {% if field.name == 'type' %}
+                                    <buttuon class="btn btn-xs btn-default add-type">+</buttuon>
+                                    <div>
+                                        <ul class="type-content">
+                                            <li class="type-item">
+                                                {% for i in typeform %}
+                                                    {{ i.label }}{{ i }}
+                                                    {{ i.errors.0 }}
+                                                {% endfor %}
+                                            <buttuon class="btn btn-sm btn-default del-type">X</buttuon>
+                                            </li>
+
+                                        </ul>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                    </div>
+
+                </div>
+                {#        问题结束#}
+                <div class="form-group">
+                    <input type="submit" value="提交">
+                </div>
+
+            </form>
+        </div>
+    </div>
+
+</div>
+
+
+
+
+
+
+<script>
+    GEN_NUM_Q = 0;
+    $(function () {
+    $('.per-item [name]').each(function (index) {
+        var name = $(this).attr('name');
+        $(this).attr('name',name+'-'+GEN_NUM_Q)
+        }
+    );
+
+    });
+
+    $('#add_item').click(function () {
+        var $ele_item = $(".per-item[hidden]").clone();
+        $ele_item.removeAttr('hidden');
+        GEN_NUM_Q+=1;
+        $ele_item.children('.form-group').each(function () {
+            var name = $(this).children('input,select').attr('name').split('-')[0];
+            $(this).children('input,select') .attr('name',name+'-'+GEN_NUM_Q)
+
+        });
+        var $ele_li = $ele_item.find(".type-item").eq(0).clone();
+        $ele_li.find('input').each(function () {
+            var name = $(this).attr('name').split('-')[0];
+            $(this).attr('name',name+'-'+GEN_NUM_Q);
+        });
+        $ele_item.find('ul.type-content').empty();
+        $ele_item.find('ul.type-content').append($ele_li);
+        $(".item-q").append($ele_item);
+    });
+    $(".item-q").on('click','.add-type',function () {
+        var num = $(this).prev().attr('name').split('-')[1];
+{#        console.log(num);#}
+        var $ele_type = $(this).next().find('.type-item').eq(0).clone();
+{#        console.log($ele_type[0]);#}
+        $ele_type.find('[name]').each(function () {
+           name_val = $(this).attr('name');
+            name_val = name_val.split('-')[0];
+           $(this).attr('name',name_val+'-'+num)
+        });
+        $(this).next().find('ul').append($ele_type );
+    });
+
+
+{#    删除#}
+     $(".item-q").on('click','.del-qitem',function () {
+         $(this).parent().remove();
+    });
+     $(".item-q").on('click','.del-type',function () {
+         $(this).parent().remove();
+    });
+
+
+{#    $('.add-type').click(function () {#}
+{#        console.log(1111);#}
+{#        var $ele_type = $('.type-item').eq(0).clone();#}
+{#        $(this).next().find('ul').append($ele_type );#}
+{##}
+{#    })#}
+   $(".item-q").on('change','select',function () {
+       var val = $(this).val();
+        console.log(val);
+       if(val=='suggestion' | val=='score'){
+{#        删除所有的typeinput#}
+        $(this).next().next().empty();
+
+       }else{
+            var num = $(this).attr('name').split('-')[1];
+        console.log(num);
+            var $ele_type = $('.per-item[hidden] .type-item').eq(0).clone();
+            console.log($ele_type[0]);
+            $ele_type.find('[name]').each(function () {
+           name_val = $(this).attr('name');
+            name_val = name_val.split('-')[0];
+           $(this).attr('name',name_val+'-'+num);
+
+        });
+            $(this).next().next().append($ele_type);
+       }
+   })
+</script>
+</body>
+</html>
