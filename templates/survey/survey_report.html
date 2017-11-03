@@ -1,0 +1,130 @@
+{% load static %}
+{% load result %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <link rel="stylesheet" href="{% static 'plugins/bootstrap/css/bootstrap.css' %}">
+    <script src="/static/plugins/js/echarts.js"></script>
+    <script src="{% static 'js/jquery-1.12.4.js' %}"></script>
+
+    <style>
+        h2{
+            width: 300px;
+            margin: 0 auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="row">
+            <h2>{{ survey_obj.title }}</h2>
+            <div>填写者：{{ num }}</div>
+            <div class="col-md-8 col-md-offset-2 quesitons-area">
+
+                    <!-- 为 ECharts 准备一个具备大小（宽高）的 DOM -->
+                {% for question in survey_questions %}
+
+                    <div class="quetion" id="{{ question.pk }}">
+                        <div class="question-desc">
+                        {{ question.qcontent }}
+                        </div>
+                        {% if question.type == 'multi' %}
+                        <div class="question-chart multi" id="q-{{ question.pk }}" style="width: 600px;height:400px;">
+
+                        </div>
+
+                        {% elif question.type == 'single' %}
+                            <div class="question-chart single" id="q-{{ question.pk }}" style="width: 600px;height:400px;">
+
+                        </div>
+{#                            <script>#}
+{#                                var myChart = echarts.init(document.getElementById('q-{{ question.pk }}'));#}
+{##}
+{#                            </script>#}
+                            {% elif question.type == 'suggestion' %}
+                            <ul>
+                            {% for result in question.surveyitemresult_set.all  %}
+
+                                <li>{{ result.suggestion }}</li>
+                            {% endfor %}
+                            </ul>
+                        {% elif question.type == 'score' %}
+                            <span class="average-score">平均评分是{% average question %}</span><span>总分10</span>
+                        {% endif %}
+
+                    </div>
+                {% endfor %}
+
+
+            </div>
+        </div>
+    </div>
+<script>
+    $(function(){
+
+    $('.multi').each(function () {
+        var pk=$(this).parent()[0].id;
+        var mychart = echarts.init(this);
+        $.get('/question/multi/data',{'pk':pk}).done(function (data) {
+            var data = JSON.parse(data);
+            mychart.setOption(
+                {
+                                title: {
+                                    text: '{{ question.qcontent }}'
+                                },
+                                tooltip: {},
+                                legend: {
+                                    data: ['次数']
+                                },
+                                xAxis: {
+                                    data: data['x']
+                                },
+                                yAxis: {},
+                                series: [{
+                                    name: '次数',
+                                    type: 'bar',
+                                    data: data['y']
+                                }]
+                            }
+
+
+            );
+
+        })
+    });
+
+    $('.single').each(function () {
+        var pk=$(this).parent()[0].id;
+{#        alert(pk);#}
+        var mychart = echarts.init(this);
+        $.get('/question/single/data',{'pk':pk}).done(function (data) {
+            var data = JSON.parse(data);
+            mychart.setOption({
+            series: [
+                {
+                    name: '访问来源',
+                    type: 'pie',
+                    radius: '55%',
+                    data: data
+                }
+            ]
+        })
+        })
+
+
+    })
+
+
+
+
+
+
+
+
+
+    })
+</script>
+</body>
+</html>

@@ -25,4 +25,8 @@ urlpatterns = [
     url(r'^survey/add/',views.survey_add),
     url(r'^survey/item/add/',views.survey_add),
     url(r'^surveytable/(\d+)/',views.questionsurvey),
+    url(r'^surveytable/delete/(\d+)/',views.surveydelete),
+    url(r'^surveytable/result/(\d+)/',views.surveyresult),
+    url(r'^question/multi/data/',views.multi_data),
+    url(r'^question/single/data/',views.single_data),
 ]

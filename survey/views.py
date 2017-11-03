@@ -67,6 +67,7 @@ class Survey(object):
         return htmls
 
 
+
 def login(request):
     if request.method == 'GET':
         loginform = forms.LoginForm()
@@ -86,6 +87,7 @@ def login(request):
             return render(request,'login.html',{'loginform':loginform})
 
 def survey_add(request):
+    '''创建一张调查问卷'''
     if request.method == 'GET':
         surveyform = forms.SurveyForm()
         qitemform = forms.QitemForm()
@@ -96,6 +98,7 @@ def survey_add(request):
         return render(request,'survey_add.html',context)
 
     elif request.method == 'POST':
+
         surveyform = forms.SurveyForm(request.POST)
         try:
             with transaction.atomic():  #事务操作
@@ -156,6 +159,7 @@ def home(request):
 
 
 def questionsurvey(request,pk):
+    '''提交问卷'''
     if request.method == 'GET':
         survey_table_obj =models.Survey.objects.filter(pk=pk).first()
         survey_table = Survey(survey_table_obj)
@@ -167,6 +171,10 @@ def questionsurvey(request,pk):
     elif request.method == 'POST':
         survey_pk = pk
         user_pk = request.session.get('userinfo')
+        print(user_pk)
+        flag = models.SurveyItemResult.objects.filter(user=user_pk)
+        if flag:
+            return HttpResponse('不能重复提交')
         params = copy.deepcopy(request.POST)
         params._mutable = True
         del params['csrfmiddlewaretoken']
@@ -176,8 +184,6 @@ def questionsurvey(request,pk):
             item_obj_pk,type = name.split('/')
             if type == 'single':
                 single_id = params.get(name).strip()
-                print('single',single_id)
-                print(int(single_id.strip()))
                 models.SurveyItemResult.objects.create(survey_id=survey_pk,item_id=item_obj_pk, user_id=user_pk,single_id=int(single_id))
 
             elif type == 'multi':
@@ -193,7 +199,6 @@ def questionsurvey(request,pk):
                            score=int(params.get(name)))
 
             else:
-                print('suggestion>>>', params.get(name))
                 models.SurveyItemResult.objects. \
                     create(survey_id=survey_pk, item_id=item_obj_pk, user_id=user_pk,
                            suggestion=params.get(name))
@@ -202,6 +207,64 @@ def questionsurvey(request,pk):
 
         print('>>>>>>',request.POST)
         return HttpResponse('提交成功')
+
+def surveydelete(request,pk):
+    # '''删除问卷调查'''
+   try:
+        models.Survey.objects.filter(pk=pk).delete()
+        return redirect('/home/')
+   except Exception as e:
+        return HttpResponse('删除失败')
+
+def surveyresult(request,pk):
+    '''调查问卷的页面展示'''
+    survey_obj = models.Survey.objects.get(pk=pk)
+    survey_questions= survey_obj.items.all()
+    survey_results = models.SurveyItemResult.objects.filter(survey_id=pk)
+    num = (survey_results.count())//(survey_questions.count()) #不准确
+    context = {
+        'survey_obj':survey_obj,
+        'survey_questions':survey_questions,
+        'survey_results':survey_results,
+        'num':num,
+    }
+    for question in survey_questions:
+        pass
+    return render(request,'survey/survey_report.html',context)
+def multi_data(request):
+    '''显示多选图表,，返回图表所需数据'''
+    pk = request.GET.get('pk')
+    question = models.Qitem.objects.get(pk=pk)
+    x_list = [i.typedesc for i in question.itemtypedesc_set.all()]
+    y_list = [0 for i in range(len(x_list))]
+    results = question.surveyitemresult_set.all()
+    for result_obj in results:
+        for ix in range(len(x_list)):
+            if result_obj.single.typedesc == x_list[ix]:
+                y_list[ix]+=1
+    data = {'x':x_list,'y':y_list}
+    return  HttpResponse(json.dumps(data))
+
+def single_data(request):
+    ''',返回单选图表所需数据'''
+    pk = request.GET.get('pk')
+    question = models.Qitem.objects.get(pk=pk)
+    x_list = [i.typedesc for i in question.itemtypedesc_set.all()]
+    y_list = [0 for i in range(len(x_list))]
+    results = question.surveyitemresult_set.all()
+    for result_obj in results:
+        for ix in range(len(x_list)):
+            if result_obj.single.typedesc == x_list[ix]:
+                y_list[ix] += 1
+    data=[]
+    for i in range(len(x_list)):
+        data.append({'value':y_list[i],'name':x_list[i]})
+    return HttpResponse(json.dumps(data))
+
+
+
+
+
 
 def gen_survey_item(request):
     if request.is_ajax():
